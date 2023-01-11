@@ -65,6 +65,10 @@ class MuiVirtualizedTable extends React.Component {
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
+        this.resizeTable();
+    }
+
+    resizeTable = () => {
         if (this.tableRef) {
             this.tableRef.current.recomputeRowHeights();
             this.tableRef.current.forceUpdate();
@@ -268,7 +272,7 @@ class MuiVirtualizedTable extends React.Component {
             ...tableProps } = this.props;
         const columnsToRender = columns.filter(c => displayColumns.includes(c.id));
         return (
-            <AutoSizer>
+            <AutoSizer onResize={() => this.resizeTable()}>
                 {({ height, width }) => (
                     <Table
                         height={height}

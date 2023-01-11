@@ -22,7 +22,7 @@ export const fakeContainers = () => {
     const containers = _fakeContainers(5000);
     return {
         columns: Object.keys(containers[0]).map((c) => ({
-            width: 120,
+            width: 200,
             label: _.capitalize(c),
             dataKey: c,
             id: c,
