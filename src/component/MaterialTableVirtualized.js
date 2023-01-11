@@ -9,11 +9,14 @@ import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import AddBox from '@mui/icons-material/AddBox';
-import {AutoSizer, Column, Table} from 'react-virtualized';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import {AutoSizer, Column, Table, defaultTableRowRenderer} from 'react-virtualized';
 import {containerData, DEFAULT_DISPLAY_COLUMNS} from "./MaterialTableVirtualizedHelperUtil";
 import Popover from "@mui/material/Popover";
 import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import ExpandedTable from './MaterialTable';
 
 const styles = (theme) => ({
     flexContainer: {
@@ -55,6 +58,18 @@ class MuiVirtualizedTable extends React.Component {
         rowHeight: 50,
         selected: {},
     };
+
+    constructor(props) {
+        super(props);
+        this.tableRef = React.createRef();
+    }
+
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        if (this.tableRef) {
+            this.tableRef.current.recomputeRowHeights();
+            this.tableRef.current.forceUpdate();
+        }
+    }
 
     getRowClassName = ({ index }) => {
         const { classes, onRowClick } = this.props;
@@ -162,9 +177,95 @@ class MuiVirtualizedTable extends React.Component {
         );
     };
 
+    renderRow = (rowProps) => {
+        const { style, className, key, rowData } = rowProps;
+        const { expanded } = this.props;
+        console.log('vinay render row', expanded, rowData);
+        if (expanded[rowData.id]) {
+            return (
+                <div
+                    style={{ ...style, display: "flex", flexDirection: "column" }}
+                    className={className}
+                    key={key}
+                >
+                    {defaultTableRowRenderer({
+                        ...rowProps,
+                        expanded,
+                        style: { width: style.width, height: 500 }
+                    })}
+                    <div
+                        style={{
+                            marginRight: "auto",
+                            marginLeft: 80,
+                            height: 500,
+                            display: "flex",
+                            alignItems: "center"
+                        }}
+                    >
+                        <ExpandedTable />
+                    </div>
+                </div>
+            );
+        }
+        return defaultTableRowRenderer(rowProps);
+    }
+
+    renderColumnExpandable = () => {
+        const { classes, rowHeight, expanded, onExpandRow } = this.props;
+        return (
+            <Column
+                key="col-expandable"
+                width={50}
+                headerRenderer={() => {
+                    return (
+                        <TableCell
+                            component="div"
+                            className={clsx(classes.tableCell, classes.flexContainer)}
+                            variant="body"
+                            style={{ height: rowHeight }}
+                            padding="checkbox"
+                        />
+                    );
+                }}
+                className={classes.flexContainer}
+                cellRenderer={({ cellData }) => {
+                    return (
+                        <TableCell
+                            component="div"
+                            className={clsx(classes.tableCell, classes.flexContainer)}
+                            variant="body"
+                            style={{ height: rowHeight }}
+                            padding="checkbox"
+                        >
+                            <IconButton
+                                aria-label="more"
+                                id="expand-button"
+                                aria-haspopup="true"
+                                onClick={() => {
+                                    const newExpanded = { ...expanded };
+                                    if (newExpanded[cellData]) {
+                                        delete newExpanded[cellData];
+                                    } else {
+                                        newExpanded[cellData] = true;
+                                    }
+                                    onExpandRow(newExpanded);
+                                }}
+                            >
+                                { expanded[cellData] ? <ExpandLess /> : <ExpandMore />}
+                            </IconButton>
+                        </TableCell>
+                    );
+                }}
+                dataKey="id"
+            />
+        );
+    };
+
     render() {
         console.log('vinay props', this.props);
-        const { classes, displayColumns, columns, rowHeight, headerHeight, ...tableProps } = this.props;
+        const { classes, displayColumns, columns,
+            rowHeight, headerHeight, expanded,
+            ...tableProps } = this.props;
         const columnsToRender = columns.filter(c => displayColumns.includes(c.id));
         return (
             <AutoSizer>
@@ -172,7 +273,9 @@ class MuiVirtualizedTable extends React.Component {
                     <Table
                         height={height}
                         width={width}
-                        rowHeight={rowHeight}
+                        rowHeight={({ index }) => {
+                            return expanded[rows[index].id] ? 500 : rowHeight
+                        }}
                         gridStyle={{
                             direction: 'inherit',
                         }}
@@ -180,6 +283,8 @@ class MuiVirtualizedTable extends React.Component {
                         className={classes.table}
                         {...tableProps}
                         rowClassName={this.getRowClassName}
+                        rowRenderer={this.renderRow}
+                        ref={this.tableRef}
                     >
                         <Column
                             key="col-checkbox"
@@ -189,6 +294,7 @@ class MuiVirtualizedTable extends React.Component {
                             cellRenderer={this.checkboxCellRenderer}
                             dataKey="id"
                         />
+                        {this.renderColumnExpandable()}
                         {columnsToRender.map(({ dataKey, ...other }, index) => {
                             return (
                                 <Column
@@ -209,7 +315,7 @@ class MuiVirtualizedTable extends React.Component {
                     </Table>
                 )}
             </AutoSizer>
-        );
+        )
     }
 }
 
@@ -230,6 +336,8 @@ MuiVirtualizedTable.propTypes = {
     onSelectRow: PropTypes.func,
     displayColumns: PropTypes.array,
     setDisplayColumns: PropTypes.func,
+    expanded: PropTypes.object,
+    onExpandRow: PropTypes.func,
 };
 
 const defaultTheme = createTheme();
@@ -257,39 +365,39 @@ const ButtonDropDownMultiSelect = ({ options, selected, onSelect }) => {
         onSelect(newSelected);
     };
     return (
-       <>
-           <IconButton
-               aria-label="more"
-               id="long-button"
-               aria-controls={open ? 'long-menu' : undefined}
-               aria-expanded={open ? 'true' : undefined}
-               aria-haspopup="true"
-               onClick={handleClick}
-           >
-               <AddBox />
-           </IconButton>
-           <Popover
-               open={open}
-               anchorEl={anchorEl}
-               onClose={handleClose}
-               anchorOrigin={{
-                   vertical: 'bottom',
-                   horizontal: 'left',
-               }}
-           >
-               <FormGroup>
-               {options.map((option) => (
-                   <FormControlLabel
-                       key={option.id}
-                       checked={selected.includes(option.id)}
-                       onChange={(e) => handleSelect(e, option)}
-                       control={<Checkbox />}
-                       label={option.label}
-                   />
-               ))}
-               </FormGroup>
-           </Popover>
-       </>
+        <>
+            <IconButton
+                aria-label="more"
+                id="long-button"
+                aria-controls={open ? 'long-menu' : undefined}
+                aria-expanded={open ? 'true' : undefined}
+                aria-haspopup="true"
+                onClick={handleClick}
+            >
+                <AddBox />
+            </IconButton>
+            <Popover
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+            >
+                <FormGroup>
+                    {options.map((option) => (
+                        <FormControlLabel
+                            key={option.id}
+                            checked={selected.includes(option.id)}
+                            onChange={(e) => handleSelect(e, option)}
+                            control={<Checkbox />}
+                            label={option.label}
+                        />
+                    ))}
+                </FormGroup>
+            </Popover>
+        </>
     );
 }
 
@@ -300,6 +408,7 @@ const {
 
 export default function ReactVirtualizedTable() {
     const [selected, setSelected] = useState({});
+    const [expanded, setExpanded] = useState({});
     const [displayColumns, setDisplayColumns] = useState([...DEFAULT_DISPLAY_COLUMNS]);
     console.log('vinay col', displayColumns);
     return (
@@ -320,6 +429,9 @@ export default function ReactVirtualizedTable() {
                     columns={columns}
                     displayColumns={displayColumns}
                     setDisplayColumns={setDisplayColumns}
+                    onRowClick={() => {}}
+                    expanded={expanded}
+                    onExpandRow={setExpanded}
                 />
             </div>
         </Paper>
