@@ -8,10 +8,11 @@ import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import AddBox from '@mui/icons-material/AddBox';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import ExpandLess from '@mui/icons-material/ExpandLess';
-import {AutoSizer, Column, Table, defaultTableRowRenderer} from 'react-virtualized';
+import {AutoSizer, Column, defaultTableRowRenderer, Table} from 'react-virtualized';
 import {containerData, DEFAULT_DISPLAY_COLUMNS} from "./MaterialTableVirtualizedHelperUtil";
 import Popover from "@mui/material/Popover";
 import FormGroup from "@mui/material/FormGroup";
@@ -94,7 +95,9 @@ class MuiVirtualizedTable extends React.Component {
                 variant="body"
                 style={{ height: rowHeight }}
             >
-                {cellData}
+                <Tooltip title={cellData}>
+                    <span>{cellData}</span>
+                </Tooltip>
             </TableCell>
         );
     };
